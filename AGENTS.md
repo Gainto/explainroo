@@ -44,24 +44,24 @@ languages, and they need neither program. German works only with one of these
 three. `explainroo docs languages` has the details.
 
 **Keys, money and data.** These services need a key or a sign-in. They run on
-the user's own account, and only when you run a command that uses them.
+the user's own account, only for a command that uses them.
 
 | Service | Used for | Needs | Costs money | What it gets |
 | --- | --- | --- | --- | --- |
-| OpenRouter | AI images (`image`) and AI clips (`clip`) | one key for both, from `connect openrouter` | yes, per image and per second of clip | the prompt and any reference images, also for the company that runs the model |
+| OpenRouter | AI images (`image`) and AI clips (`clip`) | one key for both, from `connect openrouter` | yes, per image and per second of clip | the prompt and any reference images, also for the model's company |
 | ElevenLabs, Cartesia | a paid voice | a key | yes, per character | the narration text, when narration is made |
+| Cloudflare | AI images | an id, a token | past a daily quota | the prompt |
 | Blotato (paid partner) | posting with `publish` | a key | yes, creating the key starts its paid plan | the video, its title and its text |
 | A presenter service, none yet | AI presenters (`presenter`) | a key | yes | the narration of a scene |
-| YouTube | posting with `publish` | a sign-in with the user's own Google client | no | the video, its title and its description |
+| YouTube | posting with `publish` | a sign-in with the user's Google client | no | the video, its title and its description |
 | Buffer | posting with `publish` | a sign-in | no, on Buffer's free plan | the title, the text and a link to the video |
 
 `connect`, `voices --provider` and `publish --dry-run` send only the key or
-the sign-in to that service. When a post uses a link to the video, `publish`
-and its dry run also ask that link for the size of its file. `clip --dry-run`
+the sign-in to that service. A post with a video link also asks that link for
+its file size, in its dry run too. `clip --dry-run`
 reads OpenRouter's public price list, without the prompt or a key. `services`
 reads the same list when it lists clips, at most once a day. `share` will
-upload the video and its title to explainroo.com, and sends nothing until that
-service runs.
+upload the video and title to explainroo.com, once that service runs.
 `capture` loads the page you name, and `formats add` clones the Git address
 you name. The voice runtime, models and fonts download once, and
 `doctor --fetch` may download espeak-ng's packages. Nothing of the user's goes

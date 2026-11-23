@@ -126,7 +126,7 @@ export const COMMAND_HELP = {
   image: {
     usage: 'image [project] <name> "<what to draw>" [options]',
     about: 'Buys an illustration through OpenRouter and saves it as assets/<name>.png. This costs money. The same request returns the file it already bought.',
-    options: [['--model best|cheap', 'the image model'], ['--aspect <ratio>', 'like 16:9'], ['--ref <files>', 'pictures to follow, like assets/a.png,assets/b.png'], ['--style "<words>"', 'the style of this image, in place of "style" in video.json'], ['--no-style', 'without the project\'s style'], ['--new', 'buy it again'], ['--resume <id>', 'run a job from history again'], JSON_OUT],
+    options: [['--model best|cheap', 'the image model'], ['--provider <service>', 'the image service, in place of images.provider in video.json (default: openrouter)'], ['--aspect <ratio>', 'like 16:9'], ['--ref <files>', 'pictures to follow, like assets/a.png,assets/b.png'], ['--style "<words>"', 'the style of this image, in place of "style" in video.json'], ['--no-style', 'without the project\'s style'], ['--new', 'buy it again'], ['--resume <id>', 'run a job from history again'], JSON_OUT],
     example: 'image videos/how-dns-works server-room "a rack of servers in a cool room"',
   },
   images: {

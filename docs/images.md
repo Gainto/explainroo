@@ -41,3 +41,23 @@ is not. If anything is wrong, change the prompt and make the image again.
 Keep text out of images. Put words on screen with `s.text` instead. Use
 images for things icons cannot show, and keep one style through the whole
 video.
+
+## Cloudflare instead of OpenRouter
+
+Cloudflare Workers AI makes images with Flux on the user's own Cloudflare
+account. Each account has a free allocation every day, which is enough for
+well over a hundred images and resets at 00:00 UTC. Above it a free account is
+refused, and a Workers Paid account pays well under a cent per image.
+
+```bash
+explainroo image videos/<name> cables "Two cars parked nose to nose" --provider cloudflare
+```
+
+It needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` (a token with the
+permission "Workers AI: Read"). `"images": { "provider": "cloudflare" }` in
+`video.json` makes it the default of a project. The model draws a square and
+explainroo cuts `--aspect` from its middle, so keep the subject in the middle.
+It takes no `--ref`, and the prompt with its style may have at most 2048
+characters. The file is `assets/<name>.jpg`. When the daily allocation is used
+up, `--json` says `"reason": "quota"`, and the same command works again once it
+resets, without `--new`.

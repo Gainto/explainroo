@@ -21,7 +21,7 @@ import { formatInspect, formatRecord, inspect, record } from './record.js';
 import { clean, formatClean } from './clean.js';
 import { connect } from './connect.js';
 import { CONNECTORS } from './connectors/index.js';
-import { hideSecrets } from './errors.js';
+import { ServiceError, hideSecrets } from './errors.js';
 import { formatHistory, historyReport, selfCommand } from './history.js';
 import { boughtCharacters, speechConnector } from './paid-speech.js';
 import { allOf, formatServices, findService, findStep, needsKey, SERVICES, STEPS, stepNames, stepServices } from './services.js';
@@ -482,6 +482,7 @@ export async function main(argv) {
           aspect: flags.aspect,
           refs: flags.ref ? String(flags.ref).split(',').map((x) => x.trim()).filter(Boolean) : [],
           style: flags['no-style'] ? false : flags.style,
+          provider: textFlag(flags, 'provider'),
         };
         const r = await generateImage(project, { ...request, fresh: !!flags.new, log });
         const lines = r.reused
@@ -604,7 +605,7 @@ export async function main(argv) {
   } catch (e) {
     const message = hideSecrets(e.message);
     if (e instanceof ProjectError || e instanceof ScriptError) {
-      if (json) print(null, { error: message });
+      if (json) print(null, { error: message, ...(e instanceof ServiceError ? { outcome: e.outcome, ...(e.details?.reason ? { reason: e.details.reason } : {}) } : {}) });
       else process.stderr.write(`error: ${message}\n`);
       return 1;
     }

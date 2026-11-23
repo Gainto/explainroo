@@ -177,7 +177,19 @@ export function loadASR({ log, language = 'en' } = {}) {
 }
 
 // samples: Float32Array at 16 kHz. Returns [{ text, start, end }].
-export async function transcribeWords(samples, { log, language = 'en' } = {}) {
+// Patched by the Explainer app: when EXPLAINROO_TRANSCRIBE_MODULE names a
+// module, word timing goes to its transcribeWords instead of local Whisper.
+export async function transcribeWords(samples, options = {}) {
+  const hook = process.env.EXPLAINROO_TRANSCRIBE_MODULE;
+  if (hook) {
+    const { pathToFileURL } = await import('node:url');
+    const mod = await import(pathToFileURL(hook).href);
+    return mod.transcribeWords(samples, options);
+  }
+  return whisperTranscribeWords(samples, options);
+}
+
+export async function whisperTranscribeWords(samples, { log, language = 'en' } = {}) {
   const asr = await loadASR({ log, language });
   const r = await asr(samples, { return_timestamps: 'word', chunk_length_s: 30, stride_length_s: 5,
     ...(language === 'en' ? {} : { language: language === 'pt-br' ? 'pt' : language, task: 'transcribe' }),

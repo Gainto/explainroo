@@ -165,8 +165,33 @@ const presenterAllowed = (req, res) => {
   return false;
 };
 
+// The square JPEG that Cloudflare's flux-1-schnell answers with, made once.
+export const CLOUDFLARE_ACCOUNT = 'fake-account';
+let squareJpeg = null;
+function cloudflareImage() {
+  if (!squareJpeg) {
+    const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'fake-flux-')), 'square.jpg');
+    spawnSync(ffmpegPath(), ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=1024x1024', '-frames:v', '1', out]);
+    squareJpeg = fs.readFileSync(out);
+  }
+  return squareJpeg;
+}
+
 export const ROUTES = {
   ...PUBLISHING_ROUTES,
+  cloudflare: {
+    'POST /client/v4/accounts/*/ai/run/@cf/black-forest-labs/flux-1-schnell': ({ req, res, pathname, body }) => {
+      if (req.headers.authorization !== `Bearer ${GOOD_KEY}` || !pathname.includes(`/accounts/${CLOUDFLARE_ACCOUNT}/`)) {
+        return sendJson(res, 401, { success: false, errors: [{ code: 10000, message: 'Authentication error' }], messages: [], result: null });
+      }
+      if (!body?.prompt || body.steps !== 4) return sendJson(res, 400, { success: false, errors: [{ code: 3003, message: 'Incomplete request' }], messages: [], result: null });
+      sendJson(res, 200, { success: true, errors: [], messages: [], result: { image: cloudflareImage().toString('base64') } });
+    },
+    'GET /client/v4/user/tokens/verify': ({ req, res }) => {
+      if (req.headers.authorization !== `Bearer ${GOOD_KEY}`) return sendJson(res, 401, { success: false, errors: [{ code: 1000, message: 'Invalid API Token' }], messages: [], result: null });
+      sendJson(res, 200, { success: true, errors: [], messages: [], result: { status: 'active' } });
+    },
+  },
   presenter: {
     'GET /v1/avatars': ({ req, res }) => {
       if (presenterAllowed(req, res)) sendJson(res, 200, { avatars: PRESENTER_AVATARS });
