@@ -63,7 +63,7 @@ test('within each step free entries come first, and the first entry of every ste
 });
 
 test('the first list holds what exists today', () => {
-  assert.deepEqual(SERVICES.map((s) => s.id), ['kokoro', 'recording', 'elevenlabs', 'cartesia', 'whisper', 'own-images', 'own-footage', 'openrouter', 'own-presenter', 'presenter', 'built-in-music', 'own-music', 'soundroo', 'web-player', 'cloud', 'package', 'youtube', 'buffer', 'blotato']);
+  assert.deepEqual(SERVICES.map((s) => s.id), ['kokoro', 'recording', 'elevenlabs', 'cartesia', 'whisper', 'own-images', 'own-footage', 'openrouter', 'cloudflare', 'own-presenter', 'presenter', 'built-in-music', 'own-music', 'soundroo', 'web-player', 'cloud', 'package', 'youtube', 'buffer', 'blotato']);
 });
 
 test('the hosted link is coming and says what leaves the computer, and package is the free route for posting', () => {

@@ -168,6 +168,28 @@
       }
     },
     {
+      "id": "cloudflare",
+      "step": "images",
+      "name": "Cloudflare Workers AI",
+      "about": "A company that runs AI models on its own network. explainroo uses its Flux model for illustrations. Every account has a free allocation each day, enough for well over a hundred images.",
+      "free": false,
+      "partner": false,
+      "status": "available",
+      "cost": "Free up to the daily allocation of the account (10,000 neurons, about 170 images, reset at 00:00 UTC). Above it a free account is refused, and a Workers Paid account pays well under a cent per image.",
+      "data_leaves": "The prompt goes to Cloudflare.",
+      "setup": {
+        "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"],
+        "url": "https://dash.cloudflare.com/profile/api-tokens",
+        "steps": [
+          "Make an account at cloudflare.com.",
+          "Copy the account id from the Workers AI page of the dashboard.",
+          "Open dash.cloudflare.com/profile/api-tokens and make a token with the permission \"Workers AI: Read\".",
+          "Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, then use --provider cloudflare or \"images\": { \"provider\": \"cloudflare\" } in video.json."
+        ],
+        "use": "Make an image with: explainroo image <project> <name> \"<what to draw>\" --provider cloudflare."
+      }
+    },
+    {
       "id": "own-presenter",
       "step": "presenters",
       "name": "Film yourself",
