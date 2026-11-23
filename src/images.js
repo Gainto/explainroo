@@ -7,6 +7,7 @@ import { ProjectError, ServiceError } from './errors.js';
 import { createJob, decide, findJob, jobKey, listAttempts, listJobs, placeOutput, projectWord, relativeFile, saveOutput, selfCommand, sha256File, shortId, stopSentence, updateJob } from './history.js';
 import { serviceUrl } from './services.js';
 import openrouter from './connectors/openrouter.js';
+import { CONNECTORS } from './connectors/index.js';
 
 export const IMAGE_MODELS = {
   best: 'openai/gpt-5.4-image-2',
@@ -23,6 +24,20 @@ export const DEFAULT_STYLE =
 
 export function findKey(projectDir) {
   return openrouter.findKey(projectDir);
+}
+
+// The services that make images: every connector with an image function.
+export function imageServices() {
+  return CONNECTORS.filter((c) => typeof c.image === 'function');
+}
+
+// The image service of a request: --provider, then images.provider in video.json, then OpenRouter.
+export function resolveImageService(flag, cfg = {}) {
+  const ids = imageServices().map((c) => c.id);
+  const id = flag ?? cfg.provider ?? openrouter.id;
+  const service = imageServices().find((c) => c.id === id);
+  if (!service) throw new ProjectError(`${flag !== undefined ? '--provider' : 'images.provider'} must be one of: ${ids.join(', ')} (not "${id}")`);
+  return service;
 }
 
 export function resolveModel(name) {
@@ -42,9 +57,9 @@ function publicNames(name) {
   return ['png', 'jpg', 'webp'].map((ext) => `assets/${name}.${ext}`);
 }
 
-function stopped(project, job, reason, label) {
+function stopped(project, job, reason, label, service = openrouter) {
   const parts = [`${label} is job ${shortId(job)}. ${stopSentence(job, reason)}`];
-  if (reason === 'unknown') parts.push(`To check, run "${selfCommand()} history ${projectWord(project.dir)}" again in a few minutes: a run that is still working saves its result within 10 minutes. The activity page of your OpenRouter account shows what was charged.`);
+  if (reason === 'unknown') parts.push(`To check, run "${selfCommand()} history ${projectWord(project.dir)}" again in a few minutes: a run that is still working saves its result within 10 minutes. The activity page of your ${service.name} account shows what was charged.`);
   parts.push('To buy it again anyway, run the same command with --new.');
   return new ProjectError(parts.join(' '));
 }
@@ -81,12 +96,13 @@ function finished(project, job, { reused, moved, newer = null }) {
 // Saves one image as assets/<name>.<ext>, unless the same request already has
 // one. The name and the prompt are part of the key, so changing either one makes
 // a new image, and `fresh` buys this one again anyway.
-export async function generateImage(project, { name, prompt, model, aspect, refs = [], style, fresh = false, resumes = null, log = () => {}, timeout } = {}) {
+export async function generateImage(project, { name, prompt, model, aspect, refs = [], style, provider, fresh = false, resumes = null, log = () => {}, timeout } = {}) {
   if (!name || !/^[\w-]+$/.test(name)) throw new ProjectError('the image name may only use letters, digits, "-" and "_" (it becomes assets/<name>.png)');
   if (!prompt || prompt.trim().length < 8) throw new ProjectError('describe the image in a sentence or two');
   const dir = project.dir;
   const cfg = project.config.images || {};
-  const modelId = resolveModel(model || cfg.model);
+  const service = resolveImageService(provider, cfg);
+  const modelId = service === openrouter ? resolveModel(model || cfg.model) : (model || service.defaultImageModel);
   const ratio = aspect || (project.config.height > project.config.width ? '9:16' : project.config.height === project.config.width ? '1:1' : '16:9');
   if (!ASPECTS.includes(ratio)) throw new ProjectError(`aspect must be one of ${ASPECTS.join(', ')}`);
   const styleText = style === false ? '' : (style || cfg.style || DEFAULT_STYLE);
@@ -98,7 +114,7 @@ export async function generateImage(project, { name, prompt, model, aspect, refs
     return { abs: file, file: relativeFile(dir, file), sha256: sha256File(file) };
   });
   const request = { name, prompt: prompt.trim(), model: modelId, aspect: ratio, style: styleText, refs: refFiles.map(({ file, sha256 }) => ({ file, sha256 })) };
-  const key = jobKey({ kind: 'image', provider: openrouter.id, name, prompt: request.prompt, model: modelId, aspect: ratio, style: styleText, refs: refFiles.map((r) => r.sha256) });
+  const key = jobKey({ kind: 'image', provider: service.id, name, prompt: request.prompt, model: modelId, aspect: ratio, style: styleText, refs: refFiles.map((r) => r.sha256) });
   if (resumes && resumes !== key) throw new ProjectError('a reference image of that job has changed since then. Run the image command with the new reference, or put the old file back.');
   const label = `The image "${name}" with this prompt`;
 
@@ -107,22 +123,22 @@ export async function generateImage(project, { name, prompt, model, aspect, refs
     const placed = placeOutput(dir, decision.job, publicNames(name));
     return finished(project, placed.job, { reused: true, moved: placed.moved, newer: decision.newer });
   }
-  if (decision.action !== 'buy') throw stopped(project, decision.job, decision.reason, label);
+  if (decision.action !== 'buy') throw stopped(project, decision.job, decision.reason, label, service);
 
   // Nothing is written to the record until the request can really go out.
-  openrouter.key(dir);
-  serviceUrl(openrouter);
+  service.key(dir);
+  serviceUrl(service);
   let job;
   try {
-    job = createJob(dir, key, { kind: 'image', provider: openrouter.id, attempt: decision.attempt, estimated_usd: ESTIMATED_USD[modelId] ?? null, request });
+    job = createJob(dir, key, { kind: 'image', provider: service.id, attempt: decision.attempt, estimated_usd: service.estimateImageUsd?.(modelId, ratio) ?? ESTIMATED_USD[modelId] ?? null, request });
   } catch (e) {
     if (e.code !== 'EEXIST') throw e;
-    throw stopped(project, listAttempts(dir, key).find((a) => a.attempt === decision.attempt), 'unknown', label);
+    throw stopped(project, listAttempts(dir, key).find((a) => a.attempt === decision.attempt), 'unknown', label, service);
   }
   const t0 = Date.now();
   let result;
   try {
-    result = await openrouter.image(dir, { model: modelId, text, refs: refFiles.map((r) => toDataUrl(r.abs)), aspect: ratio }, { log, timeout });
+    result = await service.image(dir, { model: modelId, text, refs: refFiles.map((r) => toDataUrl(r.abs)), aspect: ratio }, { log, timeout });
   } catch (e) {
     const outcome = e instanceof ServiceError ? e.outcome : 'lost';
     updateJob(dir, job, { status: outcome, error: e.message, ...(e.details?.cost_usd != null ? { cost_usd: e.details.cost_usd } : {}) });
@@ -149,7 +165,7 @@ export function jobRequest(project, id) {
   const job = findJob(project.dir, id);
   if (job.kind !== 'image' || !job.request) throw new ProjectError(`job ${id} is not an image job. Run "explainroo history" to see what continues it.`);
   const r = job.request;
-  return { name: r.name, prompt: r.prompt, model: r.model, aspect: r.aspect, style: r.style === '' ? false : r.style, refs: r.refs.map((ref) => ref.file), resumes: job.key };
+  return { name: r.name, prompt: r.prompt, model: r.model, provider: job.provider, aspect: r.aspect, style: r.style === '' ? false : r.style, refs: r.refs.map((ref) => ref.file), resumes: job.key };
 }
 
 // Every image request: the old log, then the record. Images belong to every

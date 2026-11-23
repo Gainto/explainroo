@@ -2145,3 +2145,36 @@ test('a request that threw is told apart by its code: nothing sent, or maybe sen
   assert.equal(shareAnswer(null), null);
   assert.equal(shareAnswer({ url: 'https://x.example/v/1', claim_url: 'ftp://x' }).claim_url, null);
 });
+
+test('image --json tells an app why a service said no: the outcome of the error comes with it', async (t) => {
+  const { cli, image, fake } = await setup(t);
+  fake.plan('openrouter', PAID, { status: 402, body: { error: { message: 'Insufficient credits' } } });
+  const r = await cli([...image('hero', PROMPT_A), '--json']);
+  assert.equal(r.code, 1);
+  const out = JSON.parse(r.stdout);
+  assert.match(out.error, /no credit left/);
+  assert.equal(out.outcome, 'refused');
+  assert.equal(out.reason, undefined);
+});
+
+test('images.provider in video.json names the image service; an unknown one lists the image services', async (t) => {
+  const { dir, cli, image, purchases } = await setup(t);
+  fs.writeFileSync(path.join(dir, 'video.json'), JSON.stringify({ images: { provider: 'nowhere' } }));
+  const bad = await cli([...image('hero', PROMPT_A), '--json']);
+  assert.equal(bad.code, 1);
+  assert.match(JSON.parse(bad.stdout).error, /images\.provider .*openrouter/);
+  fs.writeFileSync(path.join(dir, 'video.json'), JSON.stringify({ images: { provider: 'openrouter' } }));
+  const good = await cli([...image('hero', PROMPT_A), '--json']);
+  assert.equal(good.code, 0, good.text);
+  assert.equal(JSON.parse(good.stdout).provider, 'openrouter');
+  assert.equal(purchases(), 1);
+});
+
+test('--provider overrides video.json, and an unknown --provider buys nothing', async (t) => {
+  const { dir, cli, image, purchases } = await setup(t);
+  fs.writeFileSync(path.join(dir, 'video.json'), JSON.stringify({ images: { provider: 'openrouter' } }));
+  const r = await cli([...image('hero', PROMPT_A), '--provider', 'nowhere', '--json']);
+  assert.equal(r.code, 1);
+  assert.match(JSON.parse(r.stdout).error, /provider .*openrouter/);
+  assert.equal(purchases(), 0);
+});

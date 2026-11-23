@@ -469,8 +469,9 @@ function settingsOf(raw, input, dir, block = null) {
   }
   if (cfg.images !== null) {
     if (typeof cfg.images !== 'object' || Array.isArray(cfg.images)) fail('images must be an object like { "model": "best", "style": "..." }');
-    const extra = Object.keys(cfg.images).filter((k) => !['model', 'style'].includes(k));
-    if (extra.length) fail(`images has unknown setting(s): ${extra.join(', ')}. Known: model, style`);
+    const extra = Object.keys(cfg.images).filter((k) => !['model', 'style', 'provider'].includes(k));
+    if (extra.length) fail(`images has unknown setting(s): ${extra.join(', ')}. Known: model, style, provider`);
+    if (cfg.images.provider !== undefined && !(typeof cfg.images.provider === 'string' && /^[a-z0-9-]+$/.test(cfg.images.provider))) fail('images.provider must be the id of an image service, like "openrouter"');
   }
 
   if (cfg.brand !== null) {
