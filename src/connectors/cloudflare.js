@@ -84,7 +84,17 @@ async function cut(bytes, aspect) {
   }
 }
 
-async function image(dir, { model = MODEL, text, aspect = '1:1' }, { timeout = 120000 } = {}) {
+// The square is cut to the aspect afterwards, so the subject has to fit in what stays.
+function composition(aspect) {
+  const [w, h] = aspect.split(':').map(Number);
+  if (w === h) return '';
+  return w > h
+    ? '\nComposition: the whole subject in the middle band of the picture, smaller than the frame, with plenty of empty background above and below it.'
+    : '\nComposition: the whole subject in the middle of the picture, narrow, with plenty of empty background on the left and right.';
+}
+
+async function image(dir, { model = MODEL, text: request, aspect = '1:1' }, { timeout = 120000 } = {}) {
+  const text = `${request}${composition(aspect)}`;
   if (text.length > MAX_PROMPT) throw new ProjectError(`the prompt with its style has ${text.length} characters; Cloudflare takes at most ${MAX_PROMPT}. Write a shorter prompt or style.`);
   const { account, token } = key(dir);
   const url = `${serviceUrl(connector)}/client/v4/accounts/${encodeURIComponent(account)}/ai/run/${model}`;

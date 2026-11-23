@@ -133,3 +133,14 @@ test('services lists cloudflare under images', async (t) => {
   assert.equal(r.code, 0, r.text);
   assert.ok(JSON.stringify(JSON.parse(r.stdout)).includes('"cloudflare"'));
 });
+
+test('a wide or tall image asks for the subject in the middle with room to cut; a square one does not', async (t) => {
+  const { cli, image, fake } = await setup(t);
+  await cli(image('wide', '--aspect', '16:9'));
+  await cli(image('tall', '--aspect', '9:16'));
+  await cli(image('square', '--aspect', '1:1'));
+  const [wide, tall, square] = fake.requests('cloudflare', PAID).map((r) => r.body.prompt);
+  assert.match(wide, /whole subject .*middle band.*empty background above and below/i);
+  assert.match(tall, /whole subject .*middle.*empty background (on the )?left and right/i);
+  assert.doesNotMatch(square, /middle band|left and right/i);
+});
