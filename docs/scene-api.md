@@ -138,8 +138,7 @@ s.text('Every site has an *address*', { y: 300, size: 64, at: 'address' });
 s.note('about 20 ms', { x: 1400, y: 820, at: 3 });        // 32 px, muted
 ```
 
-`s.str('key')` gives on-screen text from the strings file of the language
-drawn, and `s.lang` its code.
+`s.str('key')` gives text from the strings file of the language, and `s.lang` its code.
 
 `s.text(str, options)` takes these options: `x`, `y`, `size` (48), `font`
 (`display`, `body`, `hand`, `mono`), `weight` or `bold: true`, `align`
@@ -238,8 +237,7 @@ its label. With a label, it also returns `label`, the label's box, and
 w, h]` in the file's pixels).
 
 `s.clip(src, options)` draws a video from `assets/` (`.mp4`, `.mov`, `.webm`
-or `.m4v`). It takes the layout, frame and timing options of `s.image`, and
-returns its box. `s.presenter(name)` plays an AI presenter from
+or `.m4v`) with the options of `s.image`. `s.presenter(name)` plays an AI presenter from
 `explainroo presenter` beside the content (`explainroo docs presenters`).
 
 ```js
@@ -249,25 +247,19 @@ s.clip('assets/demo.mov', { x: 1400, y: 540, h: 600, from: 12.5, speed: 1.5, at:
 ```
 
 A clip has no frame by default. `shadow: false`, `radius: 0` and
-`enter: 'none'` turn off the look's shadow, corners and entrance.
+`enter: 'none'` turn off shadow, corners and entrance.
 
 - `full: true` fills the whole frame, edge to edge, for a clip behind the
   whole scene. It has no frame, shadow, corners or entrance, and it ignores
   `x`, `y`, `w` and `h`.
-- `from` (0) and `to` (its end) are the seconds in the file where it starts
-  at `at` and stops. `speed` and `loop` take the part as the clip.
-- `speed` (1) goes from 0.25 to 4. `speed: 'fit'` plays the clip at the
-  speed that makes it end with the scene, or at `out`, from half to twice the
-  speed. Slower, it freezes at the end. Faster, it is cut off.
-- `loop` (false) repeats the clip. Otherwise it holds the last frame,
-  and `check` warns when that lasts more than 0.3 seconds.
-- `volume` (0) goes from 0 to 1. Sound plays only at `speed: 1`, stops at
-  `out`, the clip's end or the scene's end, and repeats with a loop. Music
-  ducks under it as it does under the voice.
+- `from` (0) and `to` (its end) are the seconds in the file to play.
+- `speed` (1) goes from 0.25 to 4. `speed: 'fit'` makes it end with the
+  scene or at `out`, from half to twice the speed.
+- `loop` (false) repeats it. Otherwise it holds the last frame, and `check`
+  warns when that lasts more than 0.3 seconds.
+- `volume` (0 to 1) plays its sound at `speed: 1`, with the music ducked.
 
-`at: -1` starts a clip one second into it, and `at: 0, enter: 'none'` shows
-its first frame when the scene starts. `check` can't read text in a clip, so
-look at stills.
+`check` can't read text in a clip, so look at stills.
 
 ## Recordings
 
@@ -282,13 +274,10 @@ const r = s.recording('new-invoice', { frame: 'browser', url: 'app.example.com',
 s.text('Saved', { y: 120, at: r.times.saved });
 ```
 
-A step with a `cue` happens on its word: the video holds the frame before
-it until its action lands on the cue, or plays up to twice as fast when the
-steps before take longer than the words. `check` warns about a step still
-late. Steps sharing a cue run in order, the first on the cue. `cues` sets
-cues by mark name or step number, and
-`r.times` has each step's scene time, by number and name. It also takes
-`cursor: false`, `zoom: false` and `sound: false` for the clicks. Its zoom
+A step with a `cue` lands on its word: the video holds before it, or plays
+up to twice as fast, and `check` warns about a step still late. `cues` sets
+cues by mark name or step number, and `r.times` has each step's scene time.
+It also takes `cursor: false`, `zoom: false` and `sound: false`. Its zoom
 steps are the camera, so the automatic camera keeps out.
 
 ## Pointing things out
@@ -301,15 +290,12 @@ s.annotate({ x: 960, y: 700, w: 400, h: 90 }, { type: 'circle', color: 'red', at
 
 `s.annotate(target, options)` marks an element or a box. `type` is
 `underline`, `circle`, `box`, `highlight`, `strike`, `cross` or `bracket`.
-Options: `color`, `padding`, `width`, `dur`, `out`. An icon's `id` covers the icon
-without its label, so a circle around it can run through the label. `check`
-warns about that. Mark a box that holds both instead, like
-`s.annotate({ x, y, w, h })`.
+Options: `color`, `padding`, `width`, `dur`, `out`. An icon's `id` leaves out
+its label, so to mark both, mark a box like `s.annotate({ x, y, w, h })`.
 
-A mark stays until its own `out`. With `"defaults": "0.5"` in `video.json`, a
-mark on an element's `id` that has no `out` of its own leaves with that
-element. Without the line, give it the element's `out`. `check` warns when a
-mark stays on screen more than 0.3 seconds after what it marks has left.
+A mark stays until its own `out`. With `"defaults": "0.5"`, a mark on an
+`id` without an `out` leaves with that element. `check` warns about a mark
+that stays after what it marks has left.
 
 ## Lists, numbers and charts
 
@@ -368,13 +354,10 @@ s.code([
 ], { lang: 'js', title: 'stats.js' });
 ```
 
-Parts that stay slide to their new place, removed parts fade out and new
-parts fade in. Each later step starts at its own `at`, and the change takes
-`morphDur` seconds (0.8, shortened by `pace`). The element's `at` defaults to
-the first step's. `reveal` applies to the first step only. A step's
-`highlight` replaces the earlier one. The window is as wide as the widest
-step, up to 86% of the frame, unless you set `w`, and its height follows the
-line count. `check` checks the lines of every step.
+Parts that stay slide to their new place, others fade. Each step starts at
+its own `at` and takes `morphDur` seconds (0.8). The element's `at` defaults
+to the first step's, and `reveal` applies to that step only. The window fits
+the widest step, up to 86% of the frame, unless you set `w`.
 
 `s.terminal(lines, options)` shows a terminal. Lines that start with `$ ` are
 typed as commands. Other lines are output. A line can also be `{ cmd, at }`
@@ -385,6 +368,29 @@ With `"defaults": "0.6"`, no cursor waits under output that ends the
 terminal. With `"defaults": "0.5"`, a terminal without an `at` of its own comes in with its first line,
 like code with steps. `check` warns about a window that is empty for more
 than a second, and about a command that starts with the prompt.
+
+## Phone and chat
+
+```js
+s.phone({ app: 'Messages', input: { text: 'see you', at: 'see' }, keyboard: { suggestions: ['later', 'soon'], pick: 1, pickAt: 'soon' } }, (sc) => {
+  s.chat([{ from: 'them', text: 'Dinner at 7?', at: 0.2 }, { from: 'me', text: 'Yes!', at: 'yes' }], { in: sc, typing: { at: 0.6 } });
+});
+```
+
+`s.phone(options, fn)` draws a phone in the look: `x`, `y`, `h` (0.7 of
+`s.safe.h` in a tall frame, more where that is short), `size` (its text, 40
+in a tall frame), `dark`, `time`, `app` (a title bar), `input: { text, at }`
+(typed into a field), `keyboard: { at, suggestions, suggestAt, pick, pickAt }`.
+`fn(screen)` draws on the screen above field and keyboard: `{ x, y, w, h,
+left, top, right, bottom, unit, size, fill, ink }`. `check` measures text
+there against `fill`, so color it `sc.ink`. It returns the phone's box with
+`.screen`.
+
+`s.chat(messages, options)` draws `[{ from: 'me' | 'them', text, at, out }]`
+top down, mine right in the accent, theirs left. Options: `in: screen` or
+`x`, `y`, `w`, `h`, `size`, `names: { them }`, `typing: { at, out }` (three
+dots), `scroll: false`. When it doesn't fit, it scrolls up like a messenger.
+It returns `{ bubbles, bottom }`. Neither makes a sound by default.
 
 ## Short videos
 
@@ -433,11 +439,9 @@ there on the first frame and camera punch-ins. Read
 
 ## Sound
 
-Elements make a sound when they enter. The look picks the sound: drawn lines
-scribble, cards pop and scenes change with a swipe. `sfx: false` silences
-one element. `s.quiet()` at the top of a scene turns off the entrance sounds
-of everything after it in that scene, for example when twelve circles appear
-and one sound is enough. Give that one `sfx: true`. The chime of `s.ui.toast`
+Elements make the look's sound when they enter. `sfx: false` silences one
+element. `s.quiet()` at the top of a scene turns off the entrance sounds of
+everything after it in that scene, and `sfx: true` keeps one. The chime of `s.ui.toast`
 and the swipe of `s.ui.wipe` count as their entrance sounds too. `"sfx": "minimal"` in
 `video.json` keeps only the transitions and the sounds you add yourself, and
 `sfx: true` there plays an element's usual sound too.

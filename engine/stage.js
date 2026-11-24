@@ -11,6 +11,7 @@ import { cuedSteps, smallRecording, smallPageText, talkZoomed, movingSteps, reco
 import { highlightLine, codeTokens, matchTokens, resolveCodeSteps, codeMorphState } from './code.js';
 import { ring, bounds, along, rayThrough } from './geometry.js';
 import { kitWord } from './words.js';
+import { phone, chat } from './phone.js';
 
 // The size of body text, which s.text uses unless told otherwise, and arrow
 // labels with "defaults": "0.5".
@@ -2873,6 +2874,19 @@ export class Stage {
     this._logText({ text: 'terminal', x0: -w / 2, y0: -h / 2, x1: w / 2, y1: h / 2, size, fg: T.fg, bg: T.bg, block: true, partial });
     ctx.restore();
     return geom(x, y, w, h);
+  }
+
+  // ---------- phone and chat ----------
+
+  // A smartphone with a status bar, an optional app title, text field and
+  // keyboard; fn(screen) draws on its screen (engine/phone.js).
+  phone(o = {}, fn) {
+    return phone(this, o, fn);
+  }
+
+  // A messenger chat, inside a phone's screen (in: screen) or on its own.
+  chat(messages, o = {}) {
+    return chat(this, messages, o);
   }
 
   // ---------- celebration ----------

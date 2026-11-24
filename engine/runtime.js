@@ -1764,7 +1764,7 @@ function drawLog() {
   return { shapes: [], strokes: [], lives: [], partial: [], shown: 0, order: 0 };
 }
 
-const SHAPE_NAMES = { box: 'box', icon: 'icon', image: 'image', code: 'code window', terminal: 'terminal', card: 'card', sticker: 'sticker', drawing: 'drawing' };
+const SHAPE_NAMES = { box: 'box', icon: 'icon', image: 'image', code: 'code window', terminal: 'terminal', card: 'card', sticker: 'sticker', drawing: 'drawing', phone: 'phone', bubble: 'chat bubble' };
 
 // "the box "Rivers bring salt in"", with "(id "rivers")" after it when it has an
 // id, "the drawing "moon"" by its id alone, or by its call and where it is
