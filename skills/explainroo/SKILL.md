@@ -192,25 +192,26 @@ Read the topic of the step you are on. A long topic has sections:
 | --- | --- |
 | `making-a-video` | you want each step above in full |
 | `writing` | you write `script.md`: the style, the length and the script syntax |
-| `pictures` | you plan the scenes, with four layouts to start from and how the camera moves |
+| `pictures` | you plan the scenes: four layouts to start from and how the camera moves |
 | `scene-api` | you write `scenes.js`: everything a scene can draw, with its options |
+| `phone-chat` | a scene shows a phone or a chat |
 | `troubleshooting` | a scene breaks, or before you write the first one |
 | `voices` | you pick a voice, or the user wants a paid voice or their own recording |
-| `languages` | the video isn't in English, or comes in several languages |
+| `languages` | the video isn't in English, or is in several languages |
 | `japanese-and-chinese` | the video is in Japanese or Mandarin Chinese |
 | `images` | the user wants AI images |
 | `clips` | the user wants AI video clips |
-| `music` | the user wants their own music, a sound file or original music from Soundroo |
-| `sizes` | the video is for a platform: sizes, captions, pace and the watermark |
+| `music` | the user wants their own music, a sound file or music from Soundroo |
+| `sizes` | the video is for a platform: sizes, captions, pace, watermark |
 | `formats` | you use, install or publish a format |
 | `short-video` | you make a Short, a TikTok or a Reel |
-| `product-demos` | the user wants a demo of an app or a website, also one recorded with `explainroo record` |
+| `product-demos` | the user wants a demo of an app or a website, also recorded with `explainroo record` |
 | `presenters` | the user wants an AI presenter next to the product |
 | `settings` | you change `video.json`, make a look of your own or set up a key |
-| `commands` | you need a command or a flag that this page doesn't show |
+| `commands` | you need a command or flag this page doesn't show |
 | `publishing` | the user wants a package for a platform, a link or a post |
 | `web-player` | the video goes on a website, in an iframe |
-| `transparent-video` | the video goes over camera footage in a video editor |
+| `transparent-video` | the video goes over camera footage |
 | `cut` | the user wants to cut their own recording by its words |
 | `connectors` | you add an outside service to explainroo |
 | `contributing` | you change explainroo itself |
