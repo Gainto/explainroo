@@ -417,6 +417,11 @@ function settingsOf(raw, input, dir, block = null) {
       }
     } else if (!(typeof v.id === 'string' && v.id.trim())) fail('voice.id is required');
     if (spec.keys.includes('model') && v.model !== undefined && !(typeof v.model === 'string' && v.model.trim())) fail(`voice.model must be ${/^[aeiou]/i.test(spec.name) ? 'an' : 'a'} ${spec.name} model id`);
+    // ElevenLabs voice settings: stability and similarityBoost from 0 to 1, and a tempo applied afterwards.
+    for (const k of ['stability', 'similarityBoost']) {
+      if (spec.keys.includes(k) && v[k] !== undefined && !(typeof v[k] === 'number' && v[k] >= 0 && v[k] <= 1)) fail(`voice.${k} must be a number from 0 to 1`);
+    }
+    if (spec.keys.includes('tempo') && v.tempo !== undefined && !(typeof v.tempo === 'number' && v.tempo >= 0.5 && v.tempo <= 2)) fail('voice.tempo must be a number from 0.5 to 2');
     if (v.provider === 'kokoro') cfg.voice = v.id;
     else if (spec.defaults) cfg.voice = { ...v, ...Object.fromEntries(Object.entries(spec.defaults).map(([k, d]) => [k, v[k] ?? d])) };
   }

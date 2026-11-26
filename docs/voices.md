@@ -38,6 +38,18 @@ command reports the characters used.
 ElevenLabs uses `speed` times `pace`, limited to 0.7 through 1.2.
 The voice command tells you when it uses that limit.
 
+Three more settings are optional. `stability` and `similarityBoost`, each from
+0 to 1, go to ElevenLabs as `voice_settings`; without them the voice's own
+saved settings apply. `tempo`, from 0.5 to 2, makes the voice at its normal
+speed and speeds the answer up afterwards with ffmpeg, pitch kept; it then
+replaces `speed` times `pace` for the voice. `eleven_v4` ignores the speed
+ElevenLabs is asked for, so without `tempo` it gets `speed` times `pace`
+this way. `eleven_v3` and `eleven_v4` get no neighbouring sentences.
+
+```json
+"voice": { "provider": "elevenlabs", "id": "nPczCjzI2devNBz1zQrb", "model": "eleven_v4", "stability": 0.45, "similarityBoost": 0.8, "tempo": 1.2 }
+```
+
 Cartesia's Sonic voices cost money on the user's account, and Cartesia gets
 the script text. It reads everything between two pauses at once. Set it up with
 `explainroo connect cartesia`, list voices with `explainroo voices --provider

@@ -64,7 +64,7 @@
         ],
         "use": "Run \"explainroo voices --provider elevenlabs\" to see the voices, then set \"voice\": { \"provider\": \"elevenlabs\", \"id\": \"<voice id>\" } in video.json."
       },
-      "voice": { "keys": ["id", "model"], "defaults": { "model": "eleven_multilingual_v2" } }
+      "voice": { "keys": ["id", "model", "stability", "similarityBoost", "tempo"], "defaults": { "model": "eleven_multilingual_v2" } }
     },
     {
       "id": "cartesia",

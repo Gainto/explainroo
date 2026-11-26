@@ -18,7 +18,7 @@ import { findConnector } from '../src/connectors/index.js';
 import { listJobs, historyReport, historyDir } from '../src/history.js';
 import { readWav } from '../src/wav.js';
 import { cacheRoot, TTS_MODEL, ASR_MODEL } from '../src/models.js';
-import { GOOD_KEY, startFakeServices } from './helpers/fake-services.js';
+import { GOOD_KEY, fakeSpeech, startFakeServices } from './helpers/fake-services.js';
 
 const bin = fileURLToPath(new URL('../bin/explainroo.js', import.meta.url));
 const runner = fileURLToPath(new URL('./helpers/voice-run.js', import.meta.url));
@@ -675,4 +675,50 @@ test('the real command line continues a request at the pace of a size with the c
   const done = JSON.parse((await cli('voice', dir, '--size', 'tiktok', '--json')).stdout);
   assert.equal(done.characters, 0);
   assert.equal(done.speed, 1.2);
+});
+
+const V4 = { provider: 'elevenlabs', id: 'fake-voice', model: 'eleven_v4', stability: 0.45, similarityBoost: 0.8, tempo: 1.2 };
+
+test('eleven_v4 gets stability and similarity_boost, no speed and no neighbouring sentences, and ffmpeg speeds the answer up by voice.tempo', async (t) => {
+  const { dir, fake, voiceRun } = await setup(t, { voice: V4 });
+  await voiceRun();
+  const bodies = fake.requests('elevenlabs', SPEAK).map((r) => r.body);
+  assert.equal(bodies.length, 4);
+  for (const body of bodies) {
+    assert.equal(body.model_id, 'eleven_v4');
+    assert.deepEqual(body.voice_settings, { stability: 0.45, similarity_boost: 0.8 });
+    assert.equal(body.previous_text, undefined);
+    assert.equal(body.next_text, undefined);
+  }
+  const job = listJobs(dir).find((j) => j.request.text === sentences[0]);
+  assert.equal(job.request.tempo, 1.2);
+  assert.equal(job.request.stability, 0.45);
+  assert.equal(job.request.similarityBoost, 0.8);
+  const { samples } = readWav(path.join(dir, job.output.file));
+  const bought = fakeSpeech(sentences[0]).length / 2;
+  assert.ok(Math.abs(samples.length - bought / 1.2) < 2400, `${samples.length} samples, ${Math.round(bought / 1.2)} expected`);
+});
+
+test('eleven_v4 without a tempo takes the pace with ffmpeg, as it ignores speed', async (t) => {
+  const { fake, dir, voiceRun } = await setup(t, { voice: { provider: 'elevenlabs', id: 'fake-voice', model: 'eleven_v4' }, settings: { pace: 1.15 } });
+  await voiceRun();
+  for (const r of fake.requests('elevenlabs', SPEAK)) assert.equal(r.body.voice_settings, undefined);
+  assert.ok(listJobs(dir).every((j) => j.request.tempo === 1.15));
+});
+
+test('another stability, similarity or tempo buys the narration again', async (t) => {
+  for (const change of [{ stability: 0.5 }, { similarityBoost: 0.7 }, { tempo: 1.1 }]) {
+    const { dir, spoken, voiceRun } = await setup(t, { voice: V4 });
+    await voiceRun();
+    const old = JSON.parse(fs.readFileSync(path.join(dir, 'video.json'), 'utf8'));
+    fs.writeFileSync(path.join(dir, 'video.json'), JSON.stringify({ ...old, voice: { ...V4, ...change } }));
+    await voiceRun();
+    assert.equal(spoken().length, sentences.length * 2, JSON.stringify(change));
+  }
+});
+
+test('voice settings out of range are refused', () => {
+  for (const [voice, message] of [[{ ...V4, stability: 1.5 }, /voice.stability must be a number from 0 to 1/], [{ ...V4, similarityBoost: '0.8' }, /voice.similarityBoost must be a number from 0 to 1/], [{ ...V4, tempo: 3 }, /voice.tempo must be a number from 0.5 to 2/]]) {
+    assert.throws(() => normalizeConfig({ voice }), message);
+  }
 });

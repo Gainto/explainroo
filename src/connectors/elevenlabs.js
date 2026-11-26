@@ -5,11 +5,61 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { findEnv, settingsEnvFile } from '../env.js';
 import { ProjectError, ServiceError, rememberSecret, thrownOutcome } from '../errors.js';
 import { serviceUrl } from '../services.js';
+import { ffmpeg } from '../ffmpeg.js';
 
 const SPEED_RANGE = [0.7, 1.2];
 
 export function elevenSpeed(speed) {
   return Math.max(SPEED_RANGE[0], Math.min(SPEED_RANGE[1], speed));
+}
+
+// Models that ignore voice_settings.speed: their speed comes afterwards, with ffmpeg.
+const NO_SPEED_MODELS = ['eleven_v4'];
+// Models that take no previous_text and next_text.
+const NO_CONTEXT_MODELS = ['eleven_v3', 'eleven_v4'];
+
+// How a request is made: the speed ElevenLabs is asked for, and the tempo
+// ffmpeg changes the answer by. voice.tempo, when set, replaces both, so the
+// voice is made at its normal speed and sped up afterwards (pitch kept).
+export function elevenPlan(voice, speed, pace) {
+  if (voice.tempo !== undefined) return { speed: 1, tempo: voice.tempo };
+  const wanted = elevenSpeed(speed * pace);
+  return NO_SPEED_MODELS.includes(voice.model) ? { speed: 1, tempo: wanted } : { speed: wanted, tempo: 1 };
+}
+
+// The voice settings of a request; empty when the voice's own saved settings apply.
+export function elevenSettings(voice, speed) {
+  return {
+    ...(voice.stability !== undefined ? { stability: voice.stability } : {}),
+    ...(voice.similarityBoost !== undefined ? { similarity_boost: voice.similarityBoost } : {}),
+    ...(speed !== 1 ? { speed } : {}),
+  };
+}
+
+// The settings that change what a request buys, for the key of its record.
+function settings(config) {
+  const { voice, speed, pace } = config;
+  const { tempo } = elevenPlan(voice, speed, pace);
+  return {
+    ...(voice.stability !== undefined ? { stability: voice.stability } : {}),
+    ...(voice.similarityBoost !== undefined ? { similarityBoost: voice.similarityBoost } : {}),
+    ...(tempo !== 1 ? { tempo } : {}),
+  };
+}
+
+// Mono 16-bit PCM sped up by `tempo` with ffmpeg's atempo, which keeps the pitch.
+export async function changeTempo(samples, sampleRate, tempo) {
+  if (tempo === 1) return samples;
+  const input = Buffer.alloc(samples.length * 2);
+  for (let i = 0; i < samples.length; i++) input.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(samples[i] * 32768))), i * 2);
+  const format = ['-f', 's16le', '-ar', String(sampleRate), '-ac', '1'];
+  let out;
+  try {
+    ({ stdout: out } = await ffmpeg(['-v', 'error', ...format, '-i', 'pipe:0', '-filter:a', `atempo=${tempo}`, ...format, 'pipe:1'], { input, binary: true }));
+  } catch (e) {
+    throw new ServiceError(`ffmpeg could not change the tempo of the ElevenLabs voice: ${e.message}`, 'failed');
+  }
+  return decodePCM(out);
 }
 
 function apiKey(dir) {
@@ -58,11 +108,14 @@ export function elevenUsage(project) {
 export async function elevenSpeech(project, scene, text, { previous, next } = {}) {
   const key = apiKey(project.dir);
   const { voice, speed, pace } = project.config;
+  const plan = elevenPlan(voice, speed, pace);
+  const voiceSettings = elevenSettings(voice, plan.speed);
+  const context = !NO_CONTEXT_MODELS.includes(voice.model);
   const res = await request(`${serviceUrl(connector)}/v1/text-to-speech/${encodeURIComponent(voice.id)}?output_format=pcm_24000`, key, {
     method: 'POST',
     // Without voice_settings ElevenLabs uses the voice's own saved settings.
-    body: JSON.stringify({ text, model_id: voice.model, ...(elevenSpeed(speed * pace) !== 1 ? { voice_settings: { speed: elevenSpeed(speed * pace) } } : {}),
-      ...(previous && voice.model !== 'eleven_v3' ? { previous_text: previous } : {}), ...(next && voice.model !== 'eleven_v3' ? { next_text: next } : {}) }),
+    body: JSON.stringify({ text, model_id: voice.model, ...(Object.keys(voiceSettings).length ? { voice_settings: voiceSettings } : {}),
+      ...(previous && context ? { previous_text: previous } : {}), ...(next && context ? { next_text: next } : {}) }),
   });
   const entry = { time: new Date().toISOString(), scene, characters: [...text].length, model: voice.model, voice_id: voice.id };
   fs.mkdirSync(project.paths.voice, { recursive: true });
@@ -70,7 +123,7 @@ export async function elevenSpeech(project, scene, text, { previous, next } = {}
   let buffer;
   try { buffer = await res.arrayBuffer(); }
   catch { throw new ServiceError('ElevenLabs audio download failed. Check your connection and try again.', 'lost'); }
-  return { audio: decodePCM(buffer), sampling_rate: 24000 };
+  return { audio: await changeTempo(decodePCM(buffer), 24000, plan.tempo), sampling_rate: 24000 };
 }
 
 export async function elevenVoices(dir) {
@@ -116,6 +169,7 @@ const connector = {
   speak: elevenSpeech,
   speed: elevenSpeed,
   speedRange: SPEED_RANGE,
+  settings,
   voices: elevenVoices,
 };
 
